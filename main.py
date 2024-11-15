@@ -1,6 +1,8 @@
 import os,sys
 
-from flask import Flask, request
+from flask import Flask, request, jsonify, redirect
+#from google.cloud import storage
+
 
 app = Flask(__name__)
 CERTS = None
@@ -104,7 +106,7 @@ def say_hello():
         return jsonify(user_info) # Return JSON response
     else:
         return jsonify({'error': 'IAP authentication failed'}), 401 # 401 Unauthorized
-
+'''
 @app.route("/images/<filename>")
 def serve_image(filename):
     # ... Authentication and authorization logic ...
@@ -120,6 +122,6 @@ def serve_image(filename):
             return "Image not found", 404
     else:
         return "Unauthorized", 401
-
+'''
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
