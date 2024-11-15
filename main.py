@@ -55,13 +55,21 @@ def audience():
         )
     return AUDIENCE
 
+@app.route("/userinfo")  # New route specifically for user info
+def user_info():
+     assertion = request.headers.get('X-Goog-IAP-JWT-Assertion')
+     email, id = validate_assertion(assertion)
 
+     if email:
+         user_info = {'email': email, 'id': id} # Add other claims as needed
+         return jsonify(user_info)
+     else:
+         return jsonify({'error': 'IAP authentication failed'}), 401
+
+# Improved error handling in validate_assertion
 def validate_assertion(assertion):
-    """Checks that the JWT assertion is valid (properly signed, for the
-    correct audience) and if so, returns strings for the requesting user's
-    email and a persistent user ID. If not valid, returns None for each field.
-    """
     from jose import jwt
+    from jose.exceptions import JWTError, ExpiredSignatureError, JWTClaimsError
 
     try:
         info = jwt.decode(
@@ -69,21 +77,33 @@ def validate_assertion(assertion):
             certs(),
             algorithms=['ES256'],
             audience=audience()
-            )
+        )
         return info['email'], info['sub']
-    except Exception as e:
-        print('Failed to validate assertion: {}'.format(e), file=sys.stderr)
+    except ExpiredSignatureError:
+        print("JWT has expired", file=sys.stderr)
         return None, None
+    except JWTClaimsError as e:
+        print(f"JWT claim error: {e}", file=sys.stderr)
+        return None, None
+    except JWTError as e:
+         print(f"JWT validation failed: {e}", file=sys.stderr)
+         return None, None
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}", file=sys.stderr)  # Catch other exceptions
+        return None, None
+
 
 
 @app.route('/', methods=['GET'])
 def say_hello():
-    from flask import request
-
     assertion = request.headers.get('X-Goog-IAP-JWT-Assertion')
     email, id = validate_assertion(assertion)
-    page = "<h1>Hello {}</h1>".format(email)
-    return page
+
+    if email:
+        user_info = {'email': email, 'id': id}
+        return jsonify(user_info) # Return JSON response
+    else:
+        return jsonify({'error': 'IAP authentication failed'}), 401 # 401 Unauthorized
 
 @app.route("/images/<filename>")
 def serve_image(filename):
